@@ -14,6 +14,7 @@ from analytics.ltv import ltv_summary
 from backend.processor import run_processing
 from data.generator import run_simulation
 from insights import rules
+from ml.churn_model import MODEL_DIR
 
 import pandas as pd
 import plotly.express as px
@@ -187,6 +188,22 @@ else:
     st.plotly_chart(anom_chart, use_container_width=True)
     st.dataframe(anomalies.tail(15))
 
+st.markdown("---")
+st.subheader("Churn Drivers")
+fi_path = MODEL_DIR / "churn_feature_importance.csv"
+if fi_path.exists():
+    fi_df = pd.read_csv(fi_path)
+    if "importance" in fi_df.columns:
+        fi_df["feature"] = fi_df.get("Unnamed: 0", fi_df.index)
+        fi_df = fi_df[["feature", "importance"]].head(8)
+        fig_fi = px.bar(fi_df, x="importance", y="feature", orientation="h", title="Top churn drivers")
+        st.plotly_chart(fig_fi, use_container_width=True)
+    else:
+        st.info("Feature importance not available yet.")
+else:
+    st.info("Run the pipeline to compute churn feature importance.")
+
+st.caption("Backend tip: set environment variable MODEL_BACKEND=xgboost to train gradient-boosted churn model; default is logistic regression.")
 st.markdown("---")
 st.subheader("Data Guide")
 guide_col1, guide_col2 = st.columns(2)

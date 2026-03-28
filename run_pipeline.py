@@ -47,6 +47,12 @@ def run_pipeline() -> None:
         "top_countries": segmentation.segment_by_country(processed["user_metrics"]).head(3)["churn_rate"].to_dict(),
         "ltv": ltv.to_dict(),
         "dau_anomalies": anomalies[anomalies["is_anomaly"]].to_dict(orient="list"),
+        "churn_backend": model_artifacts.get("backend", "logreg"),
+        "feature_importance": (
+            model_artifacts.get("feature_importance", {})
+            if isinstance(model_artifacts, dict)
+            else {}
+        ),
         "insights": insight_texts,
     }
 
