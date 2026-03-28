@@ -32,6 +32,15 @@ st.set_page_config(page_title="SaaS Behavior Dashboard", layout="wide")
 # Theme toggle
 theme_choice = st.sidebar.radio("Theme", ["Midnight", "Ivory"], index=0, horizontal=True)
 is_dark = theme_choice == "Midnight"
+accent_color = st.sidebar.color_picker("Accent", value="#7bd5f5" if is_dark else "#2563eb")
+chart_template = st.sidebar.selectbox("Chart style", ["plotly_dark", "plotly_white"], index=0 if is_dark else 1)
+
+# simple route state
+if "page" not in st.session_state:
+    st.session_state["page"] = "home"
+
+def go(page: str):
+    st.session_state["page"] = page
 
 # Custom styling for a modern, app-like feel with theme variables
 st.markdown(
@@ -43,7 +52,7 @@ st.markdown(
       --card2: {"#10192f" if is_dark else "#f0f4ff"};
       --border: {"#1f2a44" if is_dark else "#e4e7ef"};
       --text: {"white" if is_dark else "#0f172a"};
-      --accent: {"#7bd5f5" if is_dark else "#2563eb"};
+      --accent: {accent_color};
     }}
     body, .block-container {{background: var(--bg);}}
     .metric-card {{background: linear-gradient(135deg, var(--card), var(--card2)); padding:16px 18px; border-radius:14px; color:var(--text); border:1px solid var(--border);}}
@@ -69,7 +78,8 @@ st.markdown(
     """
     <div class="top-nav">
       <span class="nav-brand">Nimbus Analytics</span>
-      <a class="nav-link" href="#kpis">KPIs</a>
+      <a class="nav-link" href="#" onclick="window.parent.postMessage({type:'streamlit:setPage','page':'home'}, '*')">Home</a>
+      <a class="nav-link" href="#kpis">Analytics</a>
       <a class="nav-link" href="#revenue">Revenue</a>
       <a class="nav-link" href="#health">Health</a>
       <a class="nav-link" href="#churn">Churn</a>
