@@ -52,7 +52,30 @@ st.markdown(
     .pill {{display:inline-block; padding:4px 10px; border-radius:999px; background:var(--card); color:var(--accent); border:1px solid var(--border); font-size:12px;}}
     .glass {{backdrop-filter: blur(12px); background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px;}}
     .section-title {{font-size:20px; font-weight:700; margin-bottom:8px; color:var(--text);}}
+    /* Navbar */
+    .top-nav {{position:sticky; top:0; z-index:50; background:var(--card); border-bottom:1px solid var(--border); padding:12px 24px; display:flex; align-items:center; gap:18px;}}
+    .nav-brand {{font-weight:800; color:var(--accent); font-size:18px;}}
+    .nav-link {{color:var(--text); text-decoration:none; font-weight:600; padding:6px 10px; border-radius:10px;}}
+    .nav-link:hover {{background:var(--border);}}
+    /* Footer */
+    .footer {{margin-top:24px; padding:16px; text-align:center; color:var(--text); opacity:0.8; border-top:1px solid var(--border);}}
     </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Navbar
+st.markdown(
+    """
+    <div class="top-nav">
+      <span class="nav-brand">Nimbus Analytics</span>
+      <a class="nav-link" href="#kpis">KPIs</a>
+      <a class="nav-link" href="#revenue">Revenue</a>
+      <a class="nav-link" href="#health">Health</a>
+      <a class="nav-link" href="#churn">Churn</a>
+      <a class="nav-link" href="#forecast">Forecast</a>
+      <a class="nav-link" href="#downloads">Downloads</a>
+    </div>
     """,
     unsafe_allow_html=True,
 )
@@ -170,6 +193,7 @@ segmentation_df = segmentation.segment_by_country(filtered_metrics)
 cohort_retention = cohorts.build_weekly_cohort(filtered_sessions)
 insight_list = rules.generate_insights(filtered_metrics, events)
 
+kpi_anchor = st.markdown("<div id='kpis'></div>", unsafe_allow_html=True)
 kpi_columns = st.columns(4)
 metrics = [
     ("Global Users", f"{int(kpi['total_users']):,}"),
@@ -227,6 +251,7 @@ else:
     st.info("Insights will appear after pipeline reruns.")
 
 st.markdown("---")
+st.markdown("<div id='revenue'></div>", unsafe_allow_html=True)
 st.subheader("Revenue & LTV")
 ltv = ltv_summary(filtered_metrics)
 rev_col1, rev_col2, rev_col3, rev_col4 = st.columns(4)
@@ -256,6 +281,7 @@ st.metric("Projected MRR", f"${projected_mrr:,.0f}", delta=f"${delta:,.0f}")
 st.caption("Approximation assumes uplift improves acquisition and half of churn reduction compounds retention.")
 
 st.markdown("---")
+st.markdown("<div id='health'></div>", unsafe_allow_html=True)
 st.subheader("Health: DAU Anomalies")
 anomalies = detect_dau_anomalies(filtered_sessions)
 if anomalies.empty:
@@ -272,6 +298,7 @@ else:
     st.dataframe(anomalies.tail(15))
 
 st.markdown("---")
+st.markdown("<div id='churn'></div>", unsafe_allow_html=True)
 st.subheader("Churn Drivers")
 fi_path = MODEL_DIR / "churn_feature_importance.csv"
 if fi_path.exists():
@@ -339,6 +366,7 @@ else:
         except Exception as exc:
             st.info(f"Could not compute SHAP for this model: {exc}")
 
+st.markdown("<div id='forecast'></div>", unsafe_allow_html=True)
 st.subheader("Forecast: DAU (14-day)")
 forecast_df = forecast_dau(filtered_sessions)
 if forecast_df.empty:
@@ -356,6 +384,7 @@ else:
 
 st.caption("Forecast uses simple exponential smoothing; adjust by setting MODEL_BACKEND or swapping forecaster in analytics/forecast.py.")
 st.markdown("---")
+st.markdown("<div id='downloads'></div>", unsafe_allow_html=True)
 st.subheader("Downloads")
 summary_path = ROOT_DIR / "artifacts" / "analytics_summary.json"
 if summary_path.exists():
@@ -385,3 +414,4 @@ guide_col2.markdown(
 )
 
 st.caption("Tip: Use the sidebar filters and session window to create focused reviews, then regenerate demo data to test different scenarios.")
+st.markdown("<div class='footer'>Built with Streamlit · Nimbus Analytics · Modern SaaS intelligence</div>", unsafe_allow_html=True)
