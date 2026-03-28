@@ -15,6 +15,7 @@ from insights import rules
 
 import pandas as pd
 import plotly.express as px
+from datetime import datetime
 
 st.set_page_config(page_title="SaaS Behavior Dashboard", layout="wide")
 
@@ -60,8 +61,14 @@ selected_plans = st.sidebar.multiselect("Plans", plans, default=plans)
 
 min_date = sessions["session_time"].min()
 max_date = sessions["session_time"].max()
+if pd.isna(min_date):
+    min_date = datetime.utcnow()
+if pd.isna(max_date):
+    max_date = min_date
+min_date_dt = pd.to_datetime(min_date).to_pydatetime()
+max_date_dt = pd.to_datetime(max_date).to_pydatetime()
 start_date, end_date = st.sidebar.slider(
-    "Session window", min_value=min_date, max_value=max_date, value=(min_date, max_date)
+    "Session window", min_value=min_date_dt, max_value=max_date_dt, value=(min_date_dt, max_date_dt)
 )
 
 filtered_metrics = user_metrics.copy()
