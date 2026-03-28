@@ -32,7 +32,15 @@ st.set_page_config(page_title="SaaS Behavior Dashboard", layout="wide")
 # Theme toggle
 theme_choice = st.sidebar.radio("Theme", ["Midnight", "Ivory"], index=0, horizontal=True)
 is_dark = theme_choice == "Midnight"
-accent_color = st.sidebar.color_picker("Accent", value="#7bd5f5" if is_dark else "#2563eb")
+accent_presets = {
+    "Electric": "#7bd5f5",
+    "Emerald": "#10b981",
+    "Sunset": "#f97316",
+}
+preset_choice = st.sidebar.selectbox("Accent preset", ["Electric", "Emerald", "Sunset", "Custom"], index=0)
+accent_color = st.sidebar.color_picker("Custom accent", value="#7bd5f5" if is_dark else "#2563eb")
+if preset_choice != "Custom":
+    accent_color = accent_presets[preset_choice]
 chart_template = st.sidebar.selectbox("Chart style", ["plotly_dark", "plotly_white"], index=0 if is_dark else 1)
 
 # simple route state
@@ -66,6 +74,8 @@ st.markdown(
     .nav-brand {{font-weight:800; color:var(--accent); font-size:18px;}}
     .nav-link {{color:var(--text); text-decoration:none; font-weight:600; padding:6px 10px; border-radius:10px;}}
     .nav-link:hover {{background:var(--border);}}
+    .btn {{padding:12px 18px; border-radius:14px; border:none; font-weight:700; cursor:pointer; background:var(--accent); color:white;}}
+    .btn-ghost {{padding:12px 18px; border-radius:14px; border:1px solid var(--border); background:transparent; color:var(--text); font-weight:700;}}
     /* Footer */
     .footer {{margin-top:24px; padding:16px; text-align:center; color:var(--text); opacity:0.8; border-top:1px solid var(--border);}}
     </style>
@@ -100,21 +110,37 @@ nav_choice = st.radio(
 st.session_state["page"] = "home" if nav_choice == "Home" else "analytics"
 
 def render_home():
-    st.markdown(
-        f"""
-        <div style="margin-top:12px; padding:32px; border-radius:24px; background:linear-gradient(135deg, {accent_color}22, var(--card)); border:1px solid var(--border);">
-          <div style="font-size:32px; font-weight:800; color:var(--text);">Full-stack SaaS Intelligence</div>
-          <div style="font-size:16px; color:var(--text); opacity:0.85; margin-top:8px;">
-            Generate data, run analytics, score churn, forecast DAU, and explore insights in one click.
-          </div>
-          <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
-            <button onClick="window.location.reload()" style="padding:10px 16px; border-radius:12px; background:{accent_color}; color:white; border:none; font-weight:700;">Regenerate Demo Data</button>
-            <button onClick="window.location='#kpis'" style="padding:10px 16px; border-radius:12px; background:transparent; color:var(--text); border:1px solid var(--border); font-weight:700;">Launch Analytics</button>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    colh1, colh2 = st.columns([3,1])
+    with colh1:
+        st.markdown(
+            f"""
+            <div style="margin-top:12px; padding:32px; border-radius:24px; background:linear-gradient(135deg, {accent_color}22, var(--card)); border:1px solid var(--border);">
+              <div style="font-size:34px; font-weight:800; color:var(--text);">Full-stack SaaS Intelligence</div>
+              <div style="font-size:16px; color:var(--text); opacity:0.85; margin-top:8px;">
+                Generate synthetic data, run pipelines, score churn, forecast DAU, and explain results — without leaving this page.
+              </div>
+              <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+                <button class="btn" onClick="window.location.reload()">Regenerate Demo Data</button>
+                <button class="btn-ghost" onClick="window.location='#kpis'">Launch Analytics</button>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with colh2:
+        st.markdown(
+            f"""
+            <div style="padding:20px; border-radius:18px; border:1px solid var(--border); background:var(--card); color:var(--text);">
+              <div style="font-weight:700; margin-bottom:8px;">Quick presets</div>
+              <ul style="padding-left:18px; margin:0;">
+                <li>Pick an accent preset (sidebar)</li>
+                <li>Toggle Midnight/Ivory theme</li>
+                <li>Switch chart style (dark/white)</li>
+              </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     st.markdown("### What you get")
     c1, c2, c3 = st.columns(3)
     c1.markdown("**Pipeline**  \nSynthetic gen → ETL → DB ingest → ML churn → Insights")
