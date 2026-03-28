@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import Iterable
 
 import streamlit as st
 
@@ -8,6 +9,8 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from analytics import cohorts, conversion, churn as churn_analysis, segmentation
+from backend.processor import run_processing
+from data.generator import run_simulation
 from insights import rules
 
 import pandas as pd
@@ -15,20 +18,34 @@ import plotly.express as px
 
 st.set_page_config(page_title="SaaS Behavior Dashboard", layout="wide")
 
+PROCESSED_DIR = ROOT_DIR / "data" / "processed"
+
+
+def _ensure_processed_tables(names: Iterable[str]) -> None:
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    key_file = PROCESSED_DIR / "user_metrics.csv"
+    if key_file.exists():
+        return
+    run_simulation()
+    run_processing()
+
+
 @st.cache_data
 def load_table(name: str) -> pd.DataFrame:
-    path = f"data/processed/{name}.csv"
+    path = PROCESSED_DIR / f"{name}.csv"
     return pd.read_csv(path, parse_dates=True)
 
 @st.cache_data
 def load_sessions() -> pd.DataFrame:
-    df = pd.read_csv("data/processed/sessions.csv", parse_dates=["session_time"])
+    df = pd.read_csv(PROCESSED_DIR / "sessions.csv", parse_dates=["session_time"])
     return df
 
 @st.cache_data
 def load_events() -> pd.DataFrame:
-    df = pd.read_csv("data/processed/events.csv", parse_dates=["event_time"])
+    df = pd.read_csv(PROCESSED_DIR / "events.csv", parse_dates=["event_time"])
     return df
+
+_ensure_processed_tables(["user_metrics", "sessions", "events"])
 
 user_metrics = load_table("user_metrics")
 sessions = load_sessions()
