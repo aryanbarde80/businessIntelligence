@@ -37,6 +37,7 @@ This project simulates, ingests, analyzes, and visualizes SaaS user data end-to-
    python run_pipeline.py
    ```
    This generates synthetic data, cleans it, ingests it into Postgres, runs analytics, trains the churn model, and refreshes the CSV exports and insights used by the dashboard.
+   - If Postgres isn't running, the pipeline will still finish and emit CSVs/artifacts; it will simply log that DB ingest was skipped.
 4. Launch the Streamlit dashboard:
    ```sh
    streamlit run dashboard/app.py --server.port 8501
@@ -54,6 +55,7 @@ This project simulates, ingests, analyzes, and visualizes SaaS user data end-to-
 
 ## Troubleshooting
 - `FileNotFoundError` for `data/processed/*.csv`: manually run `python run_pipeline.py` or delete the CSVs and restart the dashboard so `_ensure_processed_tables` regenerates them.
+- Database not reachable: ensure `docker-compose up -d` is running; if not, the pipeline now proceeds and skips ingestion while still writing CSVs/artifacts.
 - Watch the console/logs for `[INFO] Generating synthetic data`, `Training churn model`, or `Submitting CSVs` to confirm each pipeline stage completed.
 - To refresh insights, delete `artifacts/*.json`/`.csv` (or rerun the pipeline) so the dashboard reruns `rules.generate_insights`.
 
