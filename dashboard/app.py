@@ -90,6 +90,44 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Route selector (web-like tabs)
+nav_choice = st.radio(
+    "Navigation",
+    ["Home", "Analytics"],
+    horizontal=True,
+    index=0 if st.session_state["page"] == "home" else 1,
+)
+st.session_state["page"] = "home" if nav_choice == "Home" else "analytics"
+
+def render_home():
+    st.markdown(
+        f"""
+        <div style="margin-top:12px; padding:32px; border-radius:24px; background:linear-gradient(135deg, {accent_color}22, var(--card)); border:1px solid var(--border);">
+          <div style="font-size:32px; font-weight:800; color:var(--text);">Full-stack SaaS Intelligence</div>
+          <div style="font-size:16px; color:var(--text); opacity:0.85; margin-top:8px;">
+            Generate data, run analytics, score churn, forecast DAU, and explore insights in one click.
+          </div>
+          <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+            <button onClick="window.location.reload()" style="padding:10px 16px; border-radius:12px; background:{accent_color}; color:white; border:none; font-weight:700;">Regenerate Demo Data</button>
+            <button onClick="window.location='#kpis'" style="padding:10px 16px; border-radius:12px; background:transparent; color:var(--text); border:1px solid var(--border); font-weight:700;">Launch Analytics</button>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown("### What you get")
+    c1, c2, c3 = st.columns(3)
+    c1.markdown("**Pipeline**  \nSynthetic gen → ETL → DB ingest → ML churn → Insights")
+    c2.markdown("**Analytics**  \nFunnels, cohorts, churn, anomalies, LTV, MRR, forecast")
+    c3.markdown("**Explainability**  \nFeature importance + SHAP waterfall per user")
+    st.markdown("### Customization")
+    st.markdown("- Pick accent color and chart style from the sidebar\n- Toggle theme (Midnight/Ivory)\n- Filter by countries, plans, and session window\n- Scenario planner for conversion/churn deltas")
+    st.info("Ready? Switch to the Analytics tab above.")
+
+if st.session_state["page"] == "home":
+    render_home()
+    st.stop()
+
 PROCESSED_DIR = ROOT_DIR / "data" / "processed"
 
 
@@ -248,7 +286,7 @@ daily = (
     filtered_sessions.groupby(filtered_sessions["session_time"].dt.date)["user_id"].nunique().reset_index()
 )
 daily.columns = ["date", "dau"]
-trend_col1.plotly_chart(px.area(daily, x="date", y="dau", title="DAU trend", template="plotly_dark"), use_container_width=True)
+trend_col1.plotly_chart(px.area(daily, x="date", y="dau", title="DAU trend", template=chart_template), use_container_width=True)
 
 trend_col2.subheader("Plan Segments")
 trend_col2.dataframe(segmentation_df.head(6))
@@ -319,11 +357,11 @@ if fi_path.exists():
         fi_df = fi_df[["feature"] + [c for c in fi_df.columns if c != "feature"]]
         fi_df = fi_df.fillna(0)
         top = fi_df.sort_values(by=fi_df.columns[1], key=abs, ascending=False).head(8)
-        fig_fi = px.bar(top, x=top.columns[1], y="feature", orientation="h", title="Top churn drivers (model importance)")
-        st.plotly_chart(fig_fi, use_container_width=True)
-        if "permutation_importance" in fi_df.columns:
-            fig_perm = px.bar(top, x="permutation_importance", y="feature", orientation="h", title="Permutation importance (robust)")
-            st.plotly_chart(fig_perm, use_container_width=True)
+    fig_fi = px.bar(top, x=top.columns[1], y="feature", orientation="h", title="Top churn drivers (model importance)", template=chart_template)
+    st.plotly_chart(fig_fi, use_container_width=True)
+    if "permutation_importance" in fi_df.columns:
+        fig_perm = px.bar(top, x="permutation_importance", y="feature", orientation="h", title="Permutation importance (robust)", template=chart_template)
+        st.plotly_chart(fig_perm, use_container_width=True)
     else:
         st.info("Feature importance not available yet.")
 else:
@@ -345,6 +383,7 @@ else:
         labels={"churn_probability": "Churn probability", "user_id": "User"},
         color="churn_probability",
         color_continuous_scale="Reds",
+        template=chart_template,
     )
     st.plotly_chart(fig_risk, use_container_width=True)
     st.dataframe(risk[["user_id", "churn_probability", "plans", "payments_total", "sessions_total"]])
