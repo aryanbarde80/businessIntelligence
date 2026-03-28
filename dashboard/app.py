@@ -46,6 +46,25 @@ def load_events() -> pd.DataFrame:
     df = pd.read_csv(PROCESSED_DIR / "events.csv", parse_dates=["event_time"])
     return df
 
+st.sidebar.title("How to Use")
+with st.sidebar.expander("Quick tour", expanded=False):
+    st.markdown(
+        """
+        1) Pick **Countries** and **Plans** to focus the KPIs.
+        2) Drag the **Session window** to explore different periods.
+        3) Scroll down for funnel, cohorts, and churn hotspots.
+        4) Use **Regenerate demo data** to refresh with a new synthetic cohort.
+        """
+    )
+
+if st.sidebar.button("🔄 Regenerate demo data"):
+    with st.spinner("Running full pipeline (generate → clean → score)…"):
+        _ensure_processed_tables(["user_metrics", "sessions", "events"])
+        run_simulation()
+        run_processing()
+        st.cache_data.clear()
+    st.success("Pipeline complete. Tables and artifacts refreshed.")
+
 _ensure_processed_tables(["user_metrics", "sessions", "events"])
 
 user_metrics = load_table("user_metrics")
@@ -140,3 +159,25 @@ if insight_list:
         st.markdown(f"- {insight}")
 else:
     st.info("Insights will appear after pipeline reruns.")
+
+st.markdown("---")
+st.subheader("Data Guide")
+guide_col1, guide_col2 = st.columns(2)
+guide_col1.markdown(
+    """
+    **Typical questions to ask**
+    - Are paid users churning faster in certain countries?
+    - Which features drive the most interactions?
+    - How sticky are the latest signup cohorts?
+    """
+)
+guide_col2.markdown(
+    """
+    **How to read the charts**
+    - *Funnel*: tracks drop-off from signups → activity → paid → churned.
+    - *Cohort heatmap*: darker cells = higher weekly retention for that signup cohort.
+    - *DAU line*: spikes indicate feature launches or campaigns.
+    """
+)
+
+st.caption("Tip: Use the sidebar filters and session window to create focused reviews, then regenerate demo data to test different scenarios.")
