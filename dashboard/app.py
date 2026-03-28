@@ -12,6 +12,7 @@ from analytics import cohorts, conversion, churn as churn_analysis, segmentation
 from analytics.anomaly import detect_dau_anomalies
 from analytics.ltv import ltv_summary
 from analytics.forecast import forecast_dau
+from analytics.revenue import monthly_revenue, revenue_summary
 from backend.processor import run_processing
 from data.generator import run_simulation
 from insights import rules
@@ -50,6 +51,11 @@ def load_events() -> pd.DataFrame:
     df = pd.read_csv(PROCESSED_DIR / "events.csv", parse_dates=["event_time"])
     return df
 
+@st.cache_data
+def load_payments() -> pd.DataFrame:
+    df = pd.read_csv(PROCESSED_DIR / "payments.csv", parse_dates=["payment_date"])
+    return df
+
 st.sidebar.title("How to Use")
 with st.sidebar.expander("Quick tour", expanded=False):
     st.markdown(
@@ -74,6 +80,7 @@ _ensure_processed_tables(["user_metrics", "sessions", "events"])
 user_metrics = load_table("user_metrics")
 sessions = load_sessions()
 events = load_events()
+payments = load_payments()
 
 countries = sorted(user_metrics["country"].dropna().unique())
 plans = sorted(user_metrics["plans"].dropna().unique())
@@ -172,6 +179,26 @@ rev_col1.metric("ARPU (all)", f"${ltv['arpu']}")
 rev_col2.metric("ARPU (paid)", f"${ltv['paid_arpu']}")
 rev_col3.metric("Est. LTV", f"${ltv['estimated_ltv']}")
 rev_col4.metric("Renewal rate", f"{ltv['renewal_rate_mean']:.2%}")
+
+rev_summary = revenue_summary(payments[payments["user_id"].isin(filtered_metrics["user_id"])])
+rev_col1, rev_col2, rev_col3 = st.columns(3)
+rev_col1.metric("Current MRR", f"${rev_summary['current_mrr']}")
+rev_col2.metric("Prev. MRR", f"${rev_summary['prev_mrr']}")
+rev_col3.metric("MRR growth", f"{rev_summary['mrr_growth']:.2%}")
+
+monthly_rev = monthly_revenue(payments[payments["user_id"].isin(filtered_metrics["user_id"])])
+if not monthly_rev.empty:
+    rev_chart = px.line(monthly_rev, x="month", y="revenue", title="Monthly Recurring Revenue")
+    st.plotly_chart(rev_chart, use_container_width=True)
+
+st.subheader("Scenario Planner")
+uplift = st.slider("Conversion uplift (%)", min_value=0, max_value=50, value=10, step=5)
+churn_cut = st.slider("Churn reduction (%)", min_value=0, max_value=50, value=5, step=5)
+base_mrr = rev_summary["current_mrr"]
+projected_mrr = base_mrr * (1 + uplift / 100) * (1 + churn_cut / 200)
+delta = projected_mrr - base_mrr
+st.metric("Projected MRR", f"${projected_mrr:,.0f}", delta=f"${delta:,.0f}")
+st.caption("Approximation assumes uplift improves acquisition and half of churn reduction compounds retention.")
 
 st.markdown("---")
 st.subheader("Health: DAU Anomalies")

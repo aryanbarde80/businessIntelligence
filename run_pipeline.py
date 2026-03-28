@@ -9,6 +9,7 @@ from analytics import cohorts, conversion, segmentation, churn as churn_analysis
 from analytics.anomaly import detect_dau_anomalies
 from analytics.ltv import ltv_summary
 from analytics.forecast import forecast_dau
+from analytics.revenue import revenue_summary
 from backend.ingest import ingest
 from backend.processor import run_processing
 from data.generator import run_simulation
@@ -42,6 +43,7 @@ def run_pipeline() -> None:
     ltv = ltv_summary(processed["user_metrics"])
     dau_forecast = forecast_dau(processed["sessions"])
     dau_forecast.to_csv(ARTIFACT_DIR / "dau_forecast.csv", index=False)
+    revenue = revenue_summary(processed["payments"])
 
     insight_texts = generate_insights(processed["user_metrics"], processed["events"])
     summary = {
@@ -49,6 +51,7 @@ def run_pipeline() -> None:
         "churn": churn_analysis.churn_summary(processed["user_metrics"]).to_dict(),
         "top_countries": segmentation.segment_by_country(processed["user_metrics"]).head(3)["churn_rate"].to_dict(),
         "ltv": ltv.to_dict(),
+        "revenue": revenue.to_dict(),
         "dau_anomalies": anomalies[anomalies["is_anomaly"]].to_dict(orient="list"),
         "dau_forecast": dau_forecast.tail(14).to_dict(orient="list"),
         "churn_backend": model_artifacts.get("backend", "logreg"),
