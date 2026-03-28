@@ -21,6 +21,7 @@ from ml.churn_model import MODEL_DIR
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
+import json
 
 st.set_page_config(page_title="SaaS Behavior Dashboard", layout="wide")
 
@@ -72,6 +73,13 @@ def load_payments() -> pd.DataFrame:
     df = pd.read_csv(PROCESSED_DIR / "payments.csv", parse_dates=["payment_date"])
     return df
 
+@st.cache_data
+def load_scored() -> pd.DataFrame:
+    path = PROCESSED_DIR.parent / "artifacts" / "churn_scored.csv"
+    if path.exists():
+        return pd.read_csv(path)
+    return pd.DataFrame()
+
 st.sidebar.title("How to Use")
 with st.sidebar.expander("Quick tour", expanded=False):
     st.markdown(
@@ -97,6 +105,7 @@ user_metrics = load_table("user_metrics")
 sessions = load_sessions()
 events = load_events()
 payments = load_payments()
+scored = load_scored()
 
 countries = sorted(user_metrics["country"].dropna().unique())
 plans = sorted(user_metrics["plans"].dropna().unique())
@@ -258,6 +267,23 @@ else:
 
 st.caption("Backend tip: set environment variable MODEL_BACKEND=xgboost to train gradient-boosted churn model; default is logistic regression.")
 st.markdown("---")
+st.subheader("Churn Risk Leaderboard")
+if scored.empty:
+    st.info("Run the pipeline to generate churn scores.")
+else:
+    risk = scored.sort_values("churn_probability", ascending=False).head(15)
+    fig_risk = px.bar(
+        risk,
+        x="churn_probability",
+        y="user_id",
+        orientation="h",
+        title="Top 15 at-risk users",
+        labels={"churn_probability": "Churn probability", "user_id": "User"},
+        color="churn_probability",
+        color_continuous_scale="Reds",
+    )
+    st.plotly_chart(fig_risk, use_container_width=True)
+    st.dataframe(risk[["user_id", "churn_probability", "plans", "payments_total", "sessions_total"]])
 st.subheader("Forecast: DAU (14-day)")
 forecast_df = forecast_dau(filtered_sessions)
 if forecast_df.empty:
@@ -275,6 +301,15 @@ else:
 
 st.caption("Forecast uses simple exponential smoothing; adjust by setting MODEL_BACKEND or swapping forecaster in analytics/forecast.py.")
 st.markdown("---")
+st.subheader("Downloads")
+summary_path = ROOT_DIR / "artifacts" / "analytics_summary.json"
+if summary_path.exists():
+    with summary_path.open("r", encoding="utf-8") as fh:
+        summary_payload = fh.read()
+    st.download_button("Download analytics_summary.json", data=summary_payload, file_name="analytics_summary.json")
+else:
+    st.info("Run pipeline to generate summary artifacts.")
+
 st.subheader("Data Guide")
 guide_col1, guide_col2 = st.columns(2)
 guide_col1.markdown(
