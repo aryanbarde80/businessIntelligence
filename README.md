@@ -81,4 +81,5 @@ This project simulates, ingests, analyzes, and visualizes SaaS user data end-to-
 - `artifacts/churn_scored.csv`: Scored user metrics with churn probabilities for downstream alerts.
 - `artifacts/dau_anomalies.csv`: Daily active users with z-scores and anomaly flags.
 - `artifacts/churn_feature_importance.csv`: Top drivers for churn from the selected model backend.
-- `artifacts/analytics_summary.json` now also includes LTV, anomalies, churn backend, and feature importance snippets for downstream consumers.
+- `artifacts/dau_forecast.csv`: 14-day DAU forecast using exponential smoothing.
+- `artifacts/analytics_summary.json` now also includes LTV, anomalies, churn backend, feature importance, and DAU forecast snippets for downstream consumers.

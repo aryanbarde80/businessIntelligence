@@ -11,3 +11,4 @@ seaborn>=0.12
 plotly>=5.18
 joblib>=1.4
 python-dateutil>=2.9
+statsmodels>=0.14

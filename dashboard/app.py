@@ -11,6 +11,7 @@ if str(ROOT_DIR) not in sys.path:
 from analytics import cohorts, conversion, churn as churn_analysis, segmentation
 from analytics.anomaly import detect_dau_anomalies
 from analytics.ltv import ltv_summary
+from analytics.forecast import forecast_dau
 from backend.processor import run_processing
 from data.generator import run_simulation
 from insights import rules
@@ -204,6 +205,23 @@ else:
     st.info("Run the pipeline to compute churn feature importance.")
 
 st.caption("Backend tip: set environment variable MODEL_BACKEND=xgboost to train gradient-boosted churn model; default is logistic regression.")
+st.markdown("---")
+st.subheader("Forecast: DAU (14-day)")
+forecast_df = forecast_dau(filtered_sessions)
+if forecast_df.empty:
+    st.info("Not enough history to forecast yet. Need at least 7 days.")
+else:
+    fc_fig = px.line(
+        forecast_df,
+        x="date",
+        y=["dau", "forecast"],
+        title="Historical DAU and 14-day forecast",
+        labels={"value": "DAU", "variable": "Series"},
+    )
+    st.plotly_chart(fc_fig, use_container_width=True)
+    st.dataframe(forecast_df.tail(10))
+
+st.caption("Forecast uses simple exponential smoothing; adjust by setting MODEL_BACKEND or swapping forecaster in analytics/forecast.py.")
 st.markdown("---")
 st.subheader("Data Guide")
 guide_col1, guide_col2 = st.columns(2)
