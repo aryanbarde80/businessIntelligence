@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Iterable
 
 import streamlit as st
+import joblib
+import shap
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
@@ -17,25 +19,39 @@ from backend.processor import run_processing
 from data.generator import run_simulation
 from insights import rules
 from ml.churn_model import MODEL_DIR
+from ml.features import FEATURE_COLUMNS
 
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
 import json
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="SaaS Behavior Dashboard", layout="wide")
 
-# Custom styling for a modern, app-like feel
+# Theme toggle
+theme_choice = st.sidebar.radio("Theme", ["Midnight", "Ivory"], index=0, horizontal=True)
+is_dark = theme_choice == "Midnight"
+
+# Custom styling for a modern, app-like feel with theme variables
 st.markdown(
-    """
+    f"""
     <style>
-    /* Typography and cards */
-    .metric-card {background: linear-gradient(135deg, #0b1224, #10192f); padding:16px 18px; border-radius:14px; color:white; border:1px solid #1f2a44;}
-    .metric-label {font-size:13px; opacity:0.8;}
-    .metric-value {font-size:22px; font-weight:700;}
-    .pill {display:inline-block; padding:4px 10px; border-radius:999px; background:#11192e; color:#7bd5f5; border:1px solid #203555; font-size:12px;}
-    .glass {backdrop-filter: blur(12px); background:rgba(16,25,47,0.72); border:1px solid #1f2a44; border-radius:16px; padding:18px;}
-    .section-title {font-size:20px; font-weight:700; margin-bottom:8px;}
+    :root {{
+      --bg: {"#070b12" if is_dark else "#f7f8fb"};
+      --card: {"#0f182b" if is_dark else "#ffffff"};
+      --card2: {"#10192f" if is_dark else "#f0f4ff"};
+      --border: {"#1f2a44" if is_dark else "#e4e7ef"};
+      --text: {"white" if is_dark else "#0f172a"};
+      --accent: {"#7bd5f5" if is_dark else "#2563eb"};
+    }}
+    body, .block-container {{background: var(--bg);}}
+    .metric-card {{background: linear-gradient(135deg, var(--card), var(--card2)); padding:16px 18px; border-radius:14px; color:var(--text); border:1px solid var(--border);}}
+    .metric-label {{font-size:13px; opacity:0.8;}}
+    .metric-value {{font-size:22px; font-weight:700;}}
+    .pill {{display:inline-block; padding:4px 10px; border-radius:999px; background:var(--card); color:var(--accent); border:1px solid var(--border); font-size:12px;}}
+    .glass {{backdrop-filter: blur(12px); background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px;}}
+    .section-title {{font-size:20px; font-weight:700; margin-bottom:8px; color:var(--text);}}
     </style>
     """,
     unsafe_allow_html=True,
@@ -80,6 +96,16 @@ def load_scored() -> pd.DataFrame:
         return pd.read_csv(path)
     return pd.DataFrame()
 
+@st.cache_resource
+def load_churn_pipeline():
+    path = MODEL_DIR / "churn_pipeline.joblib"
+    if not path.exists():
+        return None
+    try:
+        return joblib.load(path)
+    except Exception:
+        return None
+
 st.sidebar.title("How to Use")
 with st.sidebar.expander("Quick tour", expanded=False):
     st.markdown(
@@ -106,6 +132,7 @@ sessions = load_sessions()
 events = load_events()
 payments = load_payments()
 scored = load_scored()
+churn_pipeline = load_churn_pipeline()
 
 countries = sorted(user_metrics["country"].dropna().unique())
 plans = sorted(user_metrics["plans"].dropna().unique())
@@ -284,6 +311,34 @@ else:
     )
     st.plotly_chart(fig_risk, use_container_width=True)
     st.dataframe(risk[["user_id", "churn_probability", "plans", "payments_total", "sessions_total"]])
+
+st.subheader("Explain a User (SHAP)")
+if scored.empty or churn_pipeline is None:
+    st.info("Run the pipeline to enable SHAP explanations.")
+else:
+    explain_user = st.selectbox("Select user to explain", options=scored.sort_values("churn_probability", ascending=False)["user_id"].head(50))
+    sample = scored[FEATURE_COLUMNS + ["user_id", "churn_probability"]].copy() if "FEATURE_COLUMNS" in globals() else scored
+    sample = sample.dropna()
+    target_row = sample[sample["user_id"] == explain_user]
+    if not target_row.empty:
+        model = churn_pipeline["model"]
+        scaler = churn_pipeline.get("scaler")
+        X = sample[[c for c in sample.columns if c in model.feature_names_in_.tolist()]] if hasattr(model, "feature_names_in_") else sample.drop(columns=["user_id", "churn_probability"], errors="ignore")
+        x_row = X[X.index == target_row.index[0]]
+        try:
+            if scaler is not None:
+                X_use = scaler.transform(X)
+                x_explain = scaler.transform(x_row)
+            else:
+                X_use = X
+                x_explain = x_row
+            explainer = shap.Explainer(model, X_use)
+            shap_values = explainer(x_explain)
+            st.write(f"Churn probability: {float(target_row['churn_probability'].iloc[0]):.2%}")
+            st.pyplot(shap.plots.waterfall(shap_values[0], show=False), clear_figure=True)
+        except Exception as exc:
+            st.info(f"Could not compute SHAP for this model: {exc}")
+
 st.subheader("Forecast: DAU (14-day)")
 forecast_df = forecast_dau(filtered_sessions)
 if forecast_df.empty:
