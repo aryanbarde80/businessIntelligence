@@ -110,45 +110,48 @@ nav_choice = st.radio(
 st.session_state["page"] = "home" if nav_choice == "Home" else "analytics"
 
 def render_home():
-    colh1, colh2 = st.columns([3,1])
-    with colh1:
-        st.markdown(
-            f"""
-            <div style="margin-top:12px; padding:32px; border-radius:24px; background:linear-gradient(135deg, {accent_color}22, var(--card)); border:1px solid var(--border);">
-              <div style="font-size:34px; font-weight:800; color:var(--text);">Full-stack SaaS Intelligence</div>
-              <div style="font-size:16px; color:var(--text); opacity:0.85; margin-top:8px;">
-                Generate synthetic data, run pipelines, score churn, forecast DAU, and explain results — without leaving this page.
+    # Hero section inspired by devin.ai style
+    st.markdown(
+        f"""
+        <div style="margin-top:8px; padding:32px; border-radius:28px; background:radial-gradient(circle at 20% 20%, {accent_color}33, transparent 35%), radial-gradient(circle at 80% 0%, {accent_color}22, transparent 30%), linear-gradient(135deg, #0f111a, #0c1625); border:1px solid var(--border); color:var(--text);">
+          <div style="display:flex; gap:32px; flex-wrap:wrap; align-items:center;">
+            <div style="flex:1; min-width:280px;">
+              <div style="font-size:42px; font-weight:800; line-height:1.1;">Ship analytics like an AI engineer.</div>
+              <div style="font-size:17px; opacity:0.85; margin-top:10px;">
+                Auto-generate data, pipeline it, score churn, forecast demand, and explain decisions — all inside one Streamlit experience.
               </div>
-              <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
-                <button class="btn" onClick="window.location.reload()">Regenerate Demo Data</button>
-                <button class="btn-ghost" onClick="window.location='#kpis'">Launch Analytics</button>
+              <div style="margin-top:18px; display:flex; gap:12px; flex-wrap:wrap;">
+                <button class="btn" onClick="window.location.reload()">Regenerate demo data</button>
+                <button class="btn-ghost" onClick="window.location='#kpis'">Launch analytics</button>
+              </div>
+              <div style="margin-top:12px; display:flex; gap:12px; flex-wrap:wrap; opacity:0.85;">
+                <span class="pill">Churn ML</span><span class="pill">DAU forecast</span><span class="pill">LTV + MRR</span><span class="pill">SHAP explainability</span>
               </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with colh2:
-        st.markdown(
-            f"""
-            <div style="padding:20px; border-radius:18px; border:1px solid var(--border); background:var(--card); color:var(--text);">
-              <div style="font-weight:700; margin-bottom:8px;">Quick presets</div>
-              <ul style="padding-left:18px; margin:0;">
-                <li>Pick an accent preset (sidebar)</li>
-                <li>Toggle Midnight/Ivory theme</li>
-                <li>Switch chart style (dark/white)</li>
-              </ul>
+            <div style="flex:1; min-width:260px; padding:16px; border-radius:18px; background:var(--card); border:1px solid var(--border);">
+              <div style="font-weight:700; margin-bottom:10px;">Live preview snippet</div>
+              <pre style="background:rgba(255,255,255,0.04); padding:14px; border-radius:12px; border:1px solid var(--border); color:var(--text); overflow:auto; font-size:12px;">
+from run_pipeline import run_pipeline
+run_pipeline()
+
+# launch dashboard
+streamlit run dashboard/app.py --server.port 8501
+              </pre>
+              <div style="font-size:12px; opacity:0.7;">One command to regenerate everything.</div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.markdown("### What you get")
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown("### Why teams use Nimbus")
     c1, c2, c3 = st.columns(3)
-    c1.markdown("**Pipeline**  \nSynthetic gen → ETL → DB ingest → ML churn → Insights")
-    c2.markdown("**Analytics**  \nFunnels, cohorts, churn, anomalies, LTV, MRR, forecast")
-    c3.markdown("**Explainability**  \nFeature importance + SHAP waterfall per user")
+    c1.markdown("**End-to-end**  \nSimulate → ETL → DB → analytics → ML → insights.")
+    c2.markdown("**Operator-friendly**  \nOne-click regenerate, themed UI, filters, downloads.")
+    c3.markdown("**Explainable**  \nFeature importance + per-user SHAP waterfalls.")
     st.markdown("### Customization")
-    st.markdown("- Pick accent color and chart style from the sidebar\n- Toggle theme (Midnight/Ivory)\n- Filter by countries, plans, and session window\n- Scenario planner for conversion/churn deltas")
-    st.info("Ready? Switch to the Analytics tab above.")
+    st.markdown("- Choose accent preset or custom color; toggle Midnight/Ivory; switch chart template.\n- Filter by countries, plans, and session window.\n- Scenario planner to model conversion uplift and churn reduction.")
+    st.info("Ready? Switch to the Analytics tab above or click Launch analytics.")
 
 if st.session_state["page"] == "home":
     render_home()
