@@ -11,10 +11,15 @@ This project simulates, ingests, analyzes, and visualizes SaaS user data end-to-
 6. **Dashboard** (`dashboard/app.py`): Streamlit UI that visualizes KPIs, funnels, cohorts, churn probabilities, and insights.
 7. **Deployment**: Can be run locally with Dockerized Postgres and the Streamlit app.
 
+### Data guarantees
+- The dashboard auto-detects when `data/processed/*.csv` are missing and runs `python run_pipeline.py` (which in turn runs the generator + processor) before rendering; this ensures `user_metrics.csv` always exists even on a fresh clone or Render deployment.
+- Artifacts (`artifacts/churn_scored.csv`, `analytics_summary.json`, `insights.md`, etc.) refresh each time the orchestration script completes, so the dashboard sees the freshest scores and insights.
+
 ## Prerequisites
 - Python 3.10+ with `pip`
 - `docker` & `docker-compose` (for PostgreSQL)
 - Optional: `streamlit` to view the dashboard
+- Optional: Render/Streamlit Cloud account for deployment
 
 ## Setup & Run
 1. Install Python requirements:
@@ -37,6 +42,20 @@ This project simulates, ingests, analyzes, and visualizes SaaS user data end-to-
    streamlit run dashboard/app.py --server.port 8501
    ```
 5. Optionally inspect SQL queries at `backend/sql/queries.sql` for DAU/MAU, retention, and funnel analysis.
+
+## Render deployment checklist
+1. Push your repo to GitHub, add a new **Web Service** in Render, and point it to `main`.
+2. Set the commands via Render’s UI:
+   - **Build:** `pip install -r requirements.txt`
+   - **Start:** `streamlit run dashboard/app.py --server.port $PORT --server.headless true`
+3. Add environment variables (e.g., `DATABASE_URL`) in the Render dashboard if you use a managed Postgres instance.
+4. Render exposes `$PORT`, `RENDER_EXTERNAL_URL`, and other metadata; the dashboard already respects `$PORT` so no extra code change is required.
+5. Paid plans keep the service always-on; free tiers may spin down after inactivity—schedule a health-check or manual trigger for consistent availability.
+
+## Troubleshooting
+- `FileNotFoundError` for `data/processed/*.csv`: manually run `python run_pipeline.py` or delete the CSVs and restart the dashboard so `_ensure_processed_tables` regenerates them.
+- Watch the console/logs for `[INFO] Generating synthetic data`, `Training churn model`, or `Submitting CSVs` to confirm each pipeline stage completed.
+- To refresh insights, delete `artifacts/*.json`/`.csv` (or rerun the pipeline) so the dashboard reruns `rules.generate_insights`.
 
 ## Folder Highlights
 - `data/`: synthetic data generator plus exported CSV snapshots.
