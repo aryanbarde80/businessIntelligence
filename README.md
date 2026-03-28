@@ -79,3 +79,5 @@ This project simulates, ingests, analyzes, and visualizes SaaS user data end-to-
 - `artifacts/insights.md`: Rule-based observations surfaced to the dashboard.
 - `artifacts/churn_pipeline.joblib`: Serialized scaler and logistic-regression model pipeline.
 - `artifacts/churn_scored.csv`: Scored user metrics with churn probabilities for downstream alerts.
+- `artifacts/dau_anomalies.csv`: Daily active users with z-scores and anomaly flags.
+- `artifacts/analytics_summary.json` now also includes LTV and anomaly snippets for downstream consumers.

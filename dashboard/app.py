@@ -9,6 +9,8 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from analytics import cohorts, conversion, churn as churn_analysis, segmentation
+from analytics.anomaly import detect_dau_anomalies
+from analytics.ltv import ltv_summary
 from backend.processor import run_processing
 from data.generator import run_simulation
 from insights import rules
@@ -159,6 +161,31 @@ if insight_list:
         st.markdown(f"- {insight}")
 else:
     st.info("Insights will appear after pipeline reruns.")
+
+st.markdown("---")
+st.subheader("Revenue & LTV")
+ltv = ltv_summary(filtered_metrics)
+rev_col1, rev_col2, rev_col3, rev_col4 = st.columns(4)
+rev_col1.metric("ARPU (all)", f"${ltv['arpu']}")
+rev_col2.metric("ARPU (paid)", f"${ltv['paid_arpu']}")
+rev_col3.metric("Est. LTV", f"${ltv['estimated_ltv']}")
+rev_col4.metric("Renewal rate", f"{ltv['renewal_rate_mean']:.2%}")
+
+st.markdown("---")
+st.subheader("Health: DAU Anomalies")
+anomalies = detect_dau_anomalies(filtered_sessions)
+if anomalies.empty:
+    st.info("No session data yet.")
+else:
+    anom_chart = px.bar(
+        anomalies,
+        x="date",
+        y="dau",
+        color=anomalies["is_anomaly"].map({True: "Anomaly", False: "Normal"}),
+        title="Daily Active Users with Anomaly Flags",
+    )
+    st.plotly_chart(anom_chart, use_container_width=True)
+    st.dataframe(anomalies.tail(15))
 
 st.markdown("---")
 st.subheader("Data Guide")

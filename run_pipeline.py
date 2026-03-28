@@ -6,6 +6,8 @@ from pathlib import Path
 import logging
 
 from analytics import cohorts, conversion, segmentation, churn as churn_analysis
+from analytics.anomaly import detect_dau_anomalies
+from analytics.ltv import ltv_summary
 from backend.ingest import ingest
 from backend.processor import run_processing
 from data.generator import run_simulation
@@ -33,11 +35,18 @@ def run_pipeline() -> None:
     retention = cohorts.build_weekly_cohort(processed["sessions"])
     retention.to_csv(ARTIFACT_DIR / "cohort_retention.csv", index=True)
 
+    anomalies = detect_dau_anomalies(processed["sessions"])
+    anomalies.to_csv(ARTIFACT_DIR / "dau_anomalies.csv", index=False)
+
+    ltv = ltv_summary(processed["user_metrics"])
+
     insight_texts = generate_insights(processed["user_metrics"], processed["events"])
     summary = {
         "conversion": conversion.conversion_rates(processed["user_metrics"]).to_dict(),
         "churn": churn_analysis.churn_summary(processed["user_metrics"]).to_dict(),
         "top_countries": segmentation.segment_by_country(processed["user_metrics"]).head(3)["churn_rate"].to_dict(),
+        "ltv": ltv.to_dict(),
+        "dau_anomalies": anomalies[anomalies["is_anomaly"]].to_dict(orient="list"),
         "insights": insight_texts,
     }
 
