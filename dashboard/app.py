@@ -24,6 +24,22 @@ from datetime import datetime
 
 st.set_page_config(page_title="SaaS Behavior Dashboard", layout="wide")
 
+# Custom styling for a modern, app-like feel
+st.markdown(
+    """
+    <style>
+    /* Typography and cards */
+    .metric-card {background: linear-gradient(135deg, #0b1224, #10192f); padding:16px 18px; border-radius:14px; color:white; border:1px solid #1f2a44;}
+    .metric-label {font-size:13px; opacity:0.8;}
+    .metric-value {font-size:22px; font-weight:700;}
+    .pill {display:inline-block; padding:4px 10px; border-radius:999px; background:#11192e; color:#7bd5f5; border:1px solid #203555; font-size:12px;}
+    .glass {backdrop-filter: blur(12px); background:rgba(16,25,47,0.72); border:1px solid #1f2a44; border-radius:16px; padding:18px;}
+    .section-title {font-size:20px; font-weight:700; margin-bottom:8px;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 PROCESSED_DIR = ROOT_DIR / "data" / "processed"
 
 
@@ -119,12 +135,15 @@ cohort_retention = cohorts.build_weekly_cohort(filtered_sessions)
 insight_list = rules.generate_insights(filtered_metrics, events)
 
 kpi_columns = st.columns(4)
-kpi_columns[0].metric("Global Users", int(kpi["total_users"]))
-kpi_columns[1].metric("Paying Users", int(kpi["paid_users"]))
-conversion_rate = float(kpi["conversion_rate"])
-churn_rate = float(churn_kpi["global_churn_rate"])
-kpi_columns[2].metric("Conversion", f"{conversion_rate:.2%}")
-kpi_columns[3].metric("Churn", f"{churn_rate:.2%}")
+metrics = [
+    ("Global Users", f"{int(kpi['total_users']):,}"),
+    ("Paying Users", f"{int(kpi['paid_users']):,}"),
+    ("Conversion", f"{float(kpi['conversion_rate']):.2%}"),
+    ("Churn", f"{float(churn_kpi['global_churn_rate']):.2%}"),
+]
+for col, (label, val) in zip(kpi_columns, metrics):
+    with col:
+        st.markdown(f"<div class='metric-card'><div class='metric-label'>{label}</div><div class='metric-value'>{val}</div></div>", unsafe_allow_html=True)
 
 st.markdown("---")
 chart_col1, chart_col2 = st.columns(2)
@@ -159,7 +178,7 @@ daily = (
     filtered_sessions.groupby(filtered_sessions["session_time"].dt.date)["user_id"].nunique().reset_index()
 )
 daily.columns = ["date", "dau"]
-trend_col1.line_chart(daily.set_index("date"))
+trend_col1.plotly_chart(px.area(daily, x="date", y="dau", title="DAU trend", template="plotly_dark"), use_container_width=True)
 
 trend_col2.subheader("Plan Segments")
 trend_col2.dataframe(segmentation_df.head(6))
@@ -221,11 +240,17 @@ st.subheader("Churn Drivers")
 fi_path = MODEL_DIR / "churn_feature_importance.csv"
 if fi_path.exists():
     fi_df = pd.read_csv(fi_path)
-    if "importance" in fi_df.columns:
-        fi_df["feature"] = fi_df.get("Unnamed: 0", fi_df.index)
-        fi_df = fi_df[["feature", "importance"]].head(8)
-        fig_fi = px.bar(fi_df, x="importance", y="feature", orientation="h", title="Top churn drivers")
+    if "model_importance" in fi_df.columns or "permutation_importance" in fi_df.columns:
+        if "Unnamed: 0" in fi_df.columns:
+            fi_df = fi_df.rename(columns={"Unnamed: 0": "feature"})
+        fi_df = fi_df[["feature"] + [c for c in fi_df.columns if c != "feature"]]
+        fi_df = fi_df.fillna(0)
+        top = fi_df.sort_values(by=fi_df.columns[1], key=abs, ascending=False).head(8)
+        fig_fi = px.bar(top, x=top.columns[1], y="feature", orientation="h", title="Top churn drivers (model importance)")
         st.plotly_chart(fig_fi, use_container_width=True)
+        if "permutation_importance" in fi_df.columns:
+            fig_perm = px.bar(top, x="permutation_importance", y="feature", orientation="h", title="Permutation importance (robust)")
+            st.plotly_chart(fig_perm, use_container_width=True)
     else:
         st.info("Feature importance not available yet.")
 else:
